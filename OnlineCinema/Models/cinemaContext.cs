@@ -23,6 +23,7 @@ namespace OnlineCinema.Models
         public virtual DbSet<GenresAndFilm> GenresAndFilms { get; set; }
         public virtual DbSet<Hall> Halls { get; set; }
         public virtual DbSet<Place> Places { get; set; }
+        public virtual DbSet<Role> Roles { get; set; }
         public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<Ticket> Tickets { get; set; }
         public virtual DbSet<User> Users { get; set; }
@@ -31,13 +32,27 @@ namespace OnlineCinema.Models
         {
             if (!optionsBuilder.IsConfigured)
             {
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
                 optionsBuilder.UseSqlServer("Server=DSMAINPC; Database=cinema; Trusted_Connection=True;");
             }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            string adminRoleName = "admin";
+            string userRoleName = "user";
+
+            string adminEmail = "admin@mail.ru";
+            string adminPassword = "123456";
+
+            // добавляем роли
+            Role adminRole = new Role { RoleId = 1, Name = adminRoleName };
+            Role userRole = new Role { RoleId = 2, Name = userRoleName };
+            User adminUser = new User { UserId = 1, Email = adminEmail, Password = adminPassword, RoleId = adminRole.RoleId};
+
+            modelBuilder.Entity<Role>().HasData(new Role[] { adminRole, userRole });
+            modelBuilder.Entity<User>().HasData(new User[] { adminUser });
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.HasAnnotation("Relational:Collation", "Cyrillic_General_CI_AS");
 
             modelBuilder.Entity<AddedValue>(entity =>
@@ -171,6 +186,18 @@ namespace OnlineCinema.Models
                     .HasConstraintName("FK_places_halls");
             });
 
+            modelBuilder.Entity<Role>(entity =>
+            {
+                entity.Property(e => e.RoleId)
+                    .ValueGeneratedNever()
+                    .HasColumnName("role_id");
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnName("name");
+            });
+
             modelBuilder.Entity<Session>(entity =>
             {
                 entity.ToTable("sessions");
@@ -241,7 +268,7 @@ namespace OnlineCinema.Models
             {
                 entity.ToTable("users");
 
-                entity.HasIndex(e => new { e.Login, e.Password }, "IX_users")
+                entity.HasIndex(e => new { e.Email, e.Password }, "IX_users")
                     .IsUnique();
 
                 entity.Property(e => e.UserId).HasColumnName("user_id");
@@ -252,14 +279,8 @@ namespace OnlineCinema.Models
 
                 entity.Property(e => e.Email)
                     .IsRequired()
-                    .HasMaxLength(70)
-                    .HasColumnName("email")
-                    .IsFixedLength(true);
-
-                entity.Property(e => e.Login)
-                    .IsRequired()
                     .HasMaxLength(50)
-                    .HasColumnName("login")
+                    .HasColumnName("email")
                     .IsFixedLength(true);
 
                 entity.Property(e => e.Name)
@@ -279,11 +300,18 @@ namespace OnlineCinema.Models
                     .HasColumnName("patronymic")
                     .IsFixedLength(true);
 
+                entity.Property(e => e.RoleId).HasColumnName("role_id");
+
                 entity.Property(e => e.Surname)
                     .IsRequired()
                     .HasMaxLength(35)
                     .HasColumnName("surname")
                     .IsFixedLength(true);
+
+                entity.HasOne(d => d.Role)
+                    .WithMany(p => p.Users)
+                    .HasForeignKey(d => d.RoleId)
+                    .HasConstraintName("FK_users_Roles");
             });
 
             OnModelCreatingPartial(modelBuilder);

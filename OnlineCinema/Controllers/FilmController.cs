@@ -26,7 +26,6 @@ namespace OnlineCinema.Controllers
                 // return context.Films.Where(zxc => zxc.FilmId == 2).ToList();
 
                 // SelectActualFilms
-                //return
                 var selectActualFilms = context.Films.Join(
                     context.Sessions,
                     a => a.FilmId,
